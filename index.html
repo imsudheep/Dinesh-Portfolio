@@ -59,21 +59,6 @@
             }
         }
 
-        /* Marquee Animation */
-        .animate-marquee {
-            animation: marquee 30s linear infinite;
-        }
-
-        @keyframes marquee {
-            0% {
-                transform: translateX(0);
-            }
-
-            100% {
-                transform: translateX(-50%);
-            }
-        }
-
         /* Outline Text Support */
         .stroke-text {
             -webkit-text-stroke: 1px black;
@@ -92,7 +77,55 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
+
+        // --- Custom Hook for Counting Animation ---
+        const useCounter = (end, duration = 2000) => {
+            const [count, setCount] = useState(0);
+            const countRef = useRef(null);
+            const [isVisible, setIsVisible] = useState(false);
+
+            useEffect(() => {
+                const observer = new IntersectionObserver(
+                    ([entry]) => {
+                        if (entry.isIntersecting) {
+                            setIsVisible(true);
+                            observer.disconnect();
+                        }
+                    },
+                    { threshold: 0.1 }
+                );
+
+                if (countRef.current) {
+                    observer.observe(countRef.current);
+                }
+
+                return () => observer.disconnect();
+            }, []);
+
+            useEffect(() => {
+                if (!isVisible) return;
+
+                let startTime;
+                let animationFrame;
+
+                const step = (timestamp) => {
+                    if (!startTime) startTime = timestamp;
+                    const progress = Math.min((timestamp - startTime) / duration, 1);
+                    setCount(Math.floor(progress * end));
+
+                    if (progress < 1) {
+                        animationFrame = requestAnimationFrame(step);
+                    }
+                };
+
+                animationFrame = requestAnimationFrame(step);
+
+                return () => cancelAnimationFrame(animationFrame);
+            }, [end, duration, isVisible]);
+
+            return { count, countRef };
+        };
 
         // --- Icons Components ---
         const IconWrapper = ({ children, size = 24, className = "" }) => (
@@ -133,12 +166,29 @@
             </IconWrapper>
         );
 
+        // --- Stats Count Component ---
+        const StatItem = ({ label, value, suffix = "" }) => {
+            // Extract numeric part if value is a string like "15+"
+            const numericValue = parseInt(value);
+            const isNumeric = !isNaN(numericValue);
+            const { count, countRef } = useCounter(isNumeric ? numericValue : 0);
+
+            return (
+                <div ref={countRef} className="space-y-2">
+                    <div className="text-5xl md:text-6xl font-bold tracking-tighter">
+                        {isNumeric ? count : 0}
+                        {suffix || (value.toString().replace(/[0-9]/g, ''))}
+                    </div>
+                    <div className="text-sm md:text-base text-gray-400 font-medium uppercase tracking-wide">{label}</div>
+                </div>
+            );
+        };
+
         // --- Main Component ---
         const Portfolio = () => {
             const [isMenuOpen, setIsMenuOpen] = useState(false);
             const [scrolled, setScrolled] = useState(false);
 
-            // Handle scroll for navbar styling
             useEffect(() => {
                 const handleScroll = () => {
                     setScrolled(window.scrollY > 50);
@@ -147,7 +197,6 @@
                 return () => window.removeEventListener('scroll', handleScroll);
             }, []);
 
-            // Smooth scroll handler
             const scrollToSection = (id) => {
                 setIsMenuOpen(false);
                 const element = document.getElementById(id);
@@ -191,14 +240,14 @@
             ];
 
             const stats = [
-                { label: "Projects Completed", value: "15+" },
-                { label: "Internships", value: "07" },
-                { label: "Years Experience", value: "02+" },
-                { label: "Satisfied Clients", value: "100%" },
+                { label: "Projects Completed", value: "15", suffix: "+" },
+                { label: "Internships", value: "07", suffix: "" },
+                { label: "Years Experience", value: "02", suffix: "+" },
+                { label: "Satisfied Clients", value: "100", suffix: "%" },
             ];
 
             const skills = [
-                { category: "Development", items: ["HTML5", "CSS3", "JavaScript", "React", "Git"] },
+                { category: "Development", items: ["HTML5", "CSS3", "JavaScript", "React", "Wix", "Git"] },
                 { category: "Design", items: ["Figma", "UI/UX", "Wireframing", "Prototyping"] },
                 { category: "Creative", items: ["Video Editing", "Content Creation", "Social Media Management"] },
             ];
@@ -293,7 +342,12 @@
                             <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative">
                                 <div className="relative w-full max-w-md aspect-[4/5] bg-gray-100 rounded-[3rem] overflow-hidden shadow-2xl transition-transform hover:scale-[1.01] duration-500 border border-gray-100 group">
                                     <img
-                                        src="https://images.unsplash.com/photo-1600486913747-55e5470d6f40?q=80&w=1974&auto=format&fit=crop"
+                                        src="hero-image.png"
+                                        onError={(e) => {
+                                            // Fallback if local image not found (for preview only)
+                                            e.target.onerror = null;
+                                            e.target.src = "https://images.unsplash.com/photo-1600486913747-55e5470d6f40?q=80&w=1974&auto=format&fit=crop"
+                                        }}
                                         alt="Dinesh Kumar"
                                         className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
                                     />
@@ -316,15 +370,13 @@
                                 </div>
                             </div>
                         </div>
-
-                        {/* Scrolling Marquee Removed */}
                     </section>
 
                     {/* About Section */}
                     <section id="about" className="py-24 bg-gray-50 px-6 md:px-12">
                         <div className="max-w-4xl mx-auto text-center">
                             <span className="text-sm font-semibold tracking-widest text-gray-400 uppercase mb-4 block">About Me</span>
-                            <h2 className="text-3xl md:text-4xl font-bold mb-8">Creative Portfolio</h2>
+                            {/* Title Removed as requested */}
                             <p className="text-lg md:text-xl text-gray-600 leading-relaxed mb-8">
                                 I am currently pursuing my Bachelor's in Computer Science at <span className="text-black font-semibold">Sri Krishna Adhithya College of Arts and Science</span>.
                                 My passion lies in bridging the gap between functional code and aesthetic design.
@@ -337,7 +389,7 @@
                     <section id="skills" className="py-24 px-6 md:px-12">
                         <div className="max-w-7xl mx-auto">
                             <div className="mb-16">
-                                <h2 className="text-4xl font-bold mb-4">Expertise.</h2>
+                                <h2 className="text-4xl font-bold mb-4">Skills.</h2>
                                 <div className="h-1 w-20 bg-black"></div>
                             </div>
 
@@ -363,15 +415,12 @@
                         </div>
                     </section>
 
-                    {/* Stats Section */}
+                    {/* Stats Section with Animation */}
                     <section className="py-24 bg-black text-white px-6 md:px-12">
                         <div className="max-w-7xl mx-auto">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                                 {stats.map((stat, index) => (
-                                    <div key={index} className="space-y-2">
-                                        <div className="text-5xl md:text-6xl font-bold tracking-tighter">{stat.value}</div>
-                                        <div className="text-sm md:text-base text-gray-400 font-medium uppercase tracking-wide">{stat.label}</div>
-                                    </div>
+                                    <StatItem key={index} label={stat.label} value={stat.value} suffix={stat.suffix} />
                                 ))}
                             </div>
                         </div>
@@ -446,7 +495,7 @@
                                     <Linkedin size={24} />
                                 </a>
 
-                                {/* WhatsApp (Using same icon as before) */}
+                                {/* WhatsApp */}
                                 <a href="#" className="p-4 bg-gray-50 rounded-full hover:bg-[#25D366] hover:text-white transition-all duration-300 group">
                                     <MessageCircle size={24} />
                                 </a>
