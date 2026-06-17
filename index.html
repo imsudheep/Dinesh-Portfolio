@@ -15,6 +15,14 @@
 
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+        Babel.registerPreset("custom-preset", {
+            presets: [
+                Babel.availablePresets["env"],
+                [Babel.availablePresets["react"], { runtime: "classic" }]
+            ]
+        });
+    </script>
 
     <!-- Google Fonts: Poppins -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
@@ -76,7 +84,7 @@
 
     <div id="root"></div>
 
-    <script type="text/babel">
+    <script type="text/babel" data-presets="custom-preset">
         const { useState, useEffect, useRef } = React;
 
         // --- Custom Hook for Counting Animation ---
